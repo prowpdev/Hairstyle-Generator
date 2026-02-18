@@ -1,0 +1,5 @@
+{
+  "name": "Hairstyle AI Generator",
+  "description": "A modern web application that allows users to generate hairstyle images using AI. It features user authentication, a credit-based system for image generation, and an admin dashboard for user management.",
+  "requestFramePermissions": []
+}
