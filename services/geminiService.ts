@@ -9,15 +9,38 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY || "YOUR_API_KEY_HERE" });
 
-export const generateHairstyleImage = async (prompt: string): Promise<string> => {
+interface ImagePayload {
+  base64Data: string;
+  mimeType: string;
+}
+
+export const generateHairstyleImage = async (prompt: string, image?: ImagePayload): Promise<string> => {
   try {
     const model = 'gemini-2.5-flash-image';
-    const fullPrompt = `Generate a photorealistic image of a person with the following hairstyle: ${prompt}. The image should be high-quality, focused on the hair, with a neutral studio background.`;
+    
+    const textPart = {
+      text: image 
+        ? `Using the provided reference photo of a person, change their hairstyle to: ${prompt}. Maintain the person's facial features and background as much as possible.`
+        : `Generate a photorealistic image of a person with the following hairstyle: ${prompt}. The image should be high-quality, focused on the hair, with a neutral studio background.`
+    };
+
+    const parts: any[] = [textPart];
+
+    if (image) {
+      const imagePart = {
+        inlineData: {
+          data: image.base64Data,
+          mimeType: image.mimeType,
+        },
+      };
+      // For multi-modal prompts, it's often best to provide the image first.
+      parts.unshift(imagePart);
+    }
     
     const response = await ai.models.generateContent({
       model: model,
       contents: {
-        parts: [{ text: fullPrompt }],
+        parts: parts,
       },
       config: {
         imageConfig: {

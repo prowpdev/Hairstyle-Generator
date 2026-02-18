@@ -13,9 +13,37 @@ const GENERATION_COST = 1;
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => {
   const [prompt, setPrompt] = useState('');
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setError("Image size should not exceed 5MB.");
+        return;
+      }
+      setReferenceImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
+  const removeImage = () => {
+    setReferenceImage(null);
+    setImagePreview(null);
+    const fileInput = document.getElementById('imageUpload') as HTMLInputElement;
+    if (fileInput) {
+        fileInput.value = '';
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt) {
@@ -34,13 +62,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
     try {
       await deductCredits(user.id, GENERATION_COST);
       onUserUpdate();
-      const imageUrl = await generateHairstyleImage(prompt);
+
+      let imagePayload: { base64Data: string; mimeType: string; } | undefined = undefined;
+      if (referenceImage && imagePreview) {
+        const [header, base64Data] = imagePreview.split(',');
+        const mimeType = header.match(/:(.*?);/)?.[1] || referenceImage.type;
+        if (base64Data && mimeType) {
+            imagePayload = { base64Data, mimeType };
+        }
+      }
+      
+      const imageUrl = await generateHairstyleImage(prompt, imagePayload);
       setGeneratedImage(imageUrl);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
-      // Refund credits on failure
-      // Note: In a real app, this logic would be more robust and likely server-side.
-      // await addCredits(user.id, GENERATION_COST);
+      // Note: In a real app, refund logic would be more robust.
       onUserUpdate();
     } finally {
       setIsLoading(false);
@@ -54,18 +90,48 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
         {/* Left Side: Controls */}
         <div className="bg-secondary p-6 rounded-lg shadow-xl flex flex-col">
           <h2 className="text-2xl font-bold mb-4 text-white">Hairstyle Generator</h2>
-          <p className="text-gray-400 mb-6">Describe the hairstyle you want to create. Be as specific as you like!</p>
+          <p className="text-gray-400 mb-6">Describe the hairstyle you want to create. You can also upload a reference photo.</p>
           
           <div className="flex-grow flex flex-col space-y-4">
-            <label htmlFor="prompt" className="text-sm font-medium text-gray-300">Description</label>
-            <textarea
-              id="prompt"
-              rows={4}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g., 'a vibrant pink bob with sharp, asymmetrical bangs' or 'long, flowing silver hair with gentle waves'"
-              className="w-full p-3 bg-primary border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-none text-gray-200"
-            />
+            <div>
+              <label htmlFor="prompt" className="text-sm font-medium text-gray-300">Description</label>
+              <textarea
+                id="prompt"
+                rows={4}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="e.g., 'a vibrant pink bob with sharp, asymmetrical bangs' or 'long, flowing silver hair with gentle waves'"
+                className="mt-2 w-full p-3 bg-primary border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-none text-gray-200"
+              />
+            </div>
+            
+            <div className="mt-4">
+              <label htmlFor="imageUpload" className="text-sm font-medium text-gray-300">Reference Photo (Optional)</label>
+              <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+                <div className="space-y-1 text-center">
+                  {imagePreview ? (
+                    <div>
+                        <img src={imagePreview} alt="Reference preview" className="mx-auto h-32 w-32 object-cover rounded-md" />
+                        <button onClick={removeImage} className="mt-2 text-sm text-red-400 hover:text-red-300">Remove Image</button>
+                    </div>
+                  ) : (
+                    <>
+                      <svg className="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div className="flex text-sm text-gray-400">
+                        <label htmlFor="imageUpload" className="relative cursor-pointer bg-secondary rounded-md font-medium text-accent hover:text-accent-hover focus-within:outline-none">
+                          <span>Upload a file</span>
+                          <input id="imageUpload" name="imageUpload" type="file" className="sr-only" accept="image/png, image/jpeg, image/webp" onChange={handleImageUpload} />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6">
