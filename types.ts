@@ -26,9 +26,15 @@ export interface CreditPackage {
     name: string;
 }
 
+export enum Gender {
+  WOMAN = 'WOMAN',
+  MAN = 'MAN',
+}
+
 export interface HairstyleTemplate {
   id: string;
   name: string;
   imageUrl: string;
   prompt: string;
+  gender: Gender;
 }

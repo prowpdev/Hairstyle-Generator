@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, HairstyleTemplate } from '../../types';
+import { User, HairstyleTemplate, Gender } from '../../types';
 import { hairstyleTemplates } from '../../constants';
 import { generateHairstyleImage } from '../../services/geminiService';
 import { deductCredits } from '../../services/userService';
@@ -14,12 +14,15 @@ const GENERATION_COST = 1;
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => {
     const [prompt, setPrompt] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<HairstyleTemplate | null>(null);
+    const [selectedTemplate, setSelectedTemplate] = useState<HairstyleTemplate | null>(null);
+  const [filter, setFilter] = useState<Gender | 'ALL'>('ALL');
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+      const [error, setError] = useState('');
+
+  const filteredTemplates = hairstyleTemplates.filter(t => filter === 'ALL' || t.gender === filter);
 
   const handleTemplateSelect = (template: HairstyleTemplate | null) => {
     if (selectedTemplate?.id === template?.id) {
@@ -111,9 +114,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
           
           <div className="flex-grow flex flex-col space-y-6">
             <div>
-              <label className="text-sm font-medium text-gray-300">Choose a Hairstyle Template (Optional)</label>
+                            <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-300">Choose a Hairstyle Template</label>
+                <div className="flex space-x-2">
+                  <button onClick={() => setFilter('ALL')} className={`px-3 py-1 text-xs rounded-full ${filter === 'ALL' ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}>All</button>
+                  <button onClick={() => setFilter(Gender.WOMAN)} className={`px-3 py-1 text-xs rounded-full ${filter === Gender.WOMAN ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}>Women</button>
+                  <button onClick={() => setFilter(Gender.MAN)} className={`px-3 py-1 text-xs rounded-full ${filter === Gender.MAN ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}>Men</button>
+                </div>
+              </div>
               <div className="mt-2 flex space-x-4 overflow-x-auto pb-4 -mx-6 px-6">
-                {hairstyleTemplates.map((template) => (
+                {filteredTemplates.map((template) => (
                   <button 
                     key={template.id} 
                     onClick={() => handleTemplateSelect(template)} 
