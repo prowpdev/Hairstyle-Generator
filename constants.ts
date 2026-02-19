@@ -5,21 +5,21 @@ export const hairstyleTemplates: HairstyleTemplate[] = [
   {
     id: 'w-pixie-cut',
     name: 'Chic Pixie Cut',
-    imageUrl: 'https://images.pexels.com/photos/4158239/pexels-photo-4158239.jpeg?auto=compress&cs=tinysrgb&w=400',
+    imageUrl: './images/chic-pixie.jpg',
     prompt: 'A chic and modern pixie cut on a woman, short on the sides and slightly longer on top, with a textured finish.',
     gender: Gender.WOMAN
   },
   {
     id: 'w-bob-cut',
     name: 'Classic Bob',
-    imageUrl: 'https://images.pexels.com/photos/3763188/pexels-photo-3763188.jpeg?auto=compress&cs=tinysrgb&w=400',
+    imageUrl: './images/classic-bob.jpg',
     prompt: 'A classic, sharp bob cut on a woman that hits right at the jawline, with a clean, straight finish.',
     gender: Gender.WOMAN
   },
   {
     id: 'w-long-layers',
     name: 'Long Layers',
-    imageUrl: 'https://images.pexels.com/photos/1840624/pexels-photo-1840624.jpeg?auto=compress&cs=tinysrgb&w=400',
+    imageUrl: './images/long-layers.jpg',
     prompt: 'Long, flowing hair on a woman with soft, face-framing layers that add volume and movement.',
     gender: Gender.WOMAN
   },
