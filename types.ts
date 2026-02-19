@@ -25,3 +25,10 @@ export interface CreditPackage {
     price: number;
     name: string;
 }
+
+export interface HairstyleTemplate {
+  id: string;
+  name: string;
+  imageUrl: string;
+  prompt: string;
+}

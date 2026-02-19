@@ -14,27 +14,27 @@ interface ImagePayload {
   mimeType: string;
 }
 
-export const generateHairstyleImage = async (prompt: string, image?: ImagePayload): Promise<string> => {
+export const generateHairstyleImage = async (prompt: string, images: ImagePayload[] = []): Promise<string> => {
   try {
     const model = 'gemini-2.5-flash-image';
     
     const textPart = {
-      text: image 
-        ? `Using the provided reference photo of a person, change their hairstyle to: ${prompt}. Maintain the person's facial features and background as much as possible.`
+      text: images.length > 0
+        ? `Using the provided reference photo(s), change the person's hairstyle to: ${prompt}. Maintain the person's facial features and background as much as possible.`
         : `Generate a photorealistic image of a person with the following hairstyle: ${prompt}. The image should be high-quality, focused on the hair, with a neutral studio background.`
     };
 
     const parts: any[] = [textPart];
 
-    if (image) {
-      const imagePart = {
-        inlineData: {
-          data: image.base64Data,
-          mimeType: image.mimeType,
-        },
-      };
-      // For multi-modal prompts, it's often best to provide the image first.
-      parts.unshift(imagePart);
+    if (images.length > 0) {
+      for (const image of images) {
+        parts.unshift({
+          inlineData: {
+            data: image.base64Data,
+            mimeType: image.mimeType,
+          },
+        });
+      }
     }
     
     const response = await ai.models.generateContent({

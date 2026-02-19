@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { User } from '../../types';
+import { User, HairstyleTemplate } from '../../types';
+import { hairstyleTemplates } from '../../constants';
 import { generateHairstyleImage } from '../../services/geminiService';
 import { deductCredits } from '../../services/userService';
 
@@ -12,12 +13,23 @@ interface UserDashboardProps {
 const GENERATION_COST = 1;
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => {
-  const [prompt, setPrompt] = useState('');
+    const [prompt, setPrompt] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<HairstyleTemplate | null>(null);
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+    const [error, setError] = useState('');
+
+  const handleTemplateSelect = (template: HairstyleTemplate | null) => {
+    if (selectedTemplate?.id === template?.id) {
+      setSelectedTemplate(null);
+      setPrompt('');
+    } else {
+      setSelectedTemplate(template);
+      setPrompt(template?.prompt || '');
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,16 +75,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
       await deductCredits(user.id, GENERATION_COST);
       onUserUpdate();
 
-      let imagePayload: { base64Data: string; mimeType: string; } | undefined = undefined;
+      const imagePayloads: { base64Data: string; mimeType: string; }[] = [];
+
+      // NOTE: The template image URL from picsum cannot be directly converted to base64 on the client
+      // due to CORS policy. A server-side proxy would be needed for a full implementation.
+      // For now, only the user-uploaded image will be sent as a reference.
+
       if (referenceImage && imagePreview) {
         const [header, base64Data] = imagePreview.split(',');
         const mimeType = header.match(/:(.*?);/)?.[1] || referenceImage.type;
         if (base64Data && mimeType) {
-            imagePayload = { base64Data, mimeType };
+            imagePayloads.push({ base64Data, mimeType });
         }
       }
       
-      const imageUrl = await generateHairstyleImage(prompt, imagePayload);
+      const imageUrl = await generateHairstyleImage(prompt, imagePayloads);
       setGeneratedImage(imageUrl);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
@@ -92,7 +109,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
           <h2 className="text-2xl font-bold mb-4 text-white">Hairstyle Generator</h2>
           <p className="text-gray-400 mb-6">Describe the hairstyle you want to create. You can also upload a reference photo.</p>
           
-          <div className="flex-grow flex flex-col space-y-4">
+          <div className="flex-grow flex flex-col space-y-6">
+            <div>
+              <label className="text-sm font-medium text-gray-300">Choose a Hairstyle Template (Optional)</label>
+              <div className="mt-2 flex space-x-4 overflow-x-auto pb-4 -mx-6 px-6">
+                {hairstyleTemplates.map((template) => (
+                  <button 
+                    key={template.id} 
+                    onClick={() => handleTemplateSelect(template)} 
+                    className={`flex-shrink-0 text-center p-2 rounded-lg transition-all bg-primary hover:bg-gray-800 ${selectedTemplate?.id === template.id ? 'ring-2 ring-offset-2 ring-offset-secondary ring-accent' : ''}`}>
+                    <img referrerPolicy='no-referrer' src={template.imageUrl} alt={template.name} className="w-28 h-28 object-cover rounded-md mx-auto"/>
+                    <p className="mt-2 text-xs font-medium text-gray-300 w-28 truncate">{template.name}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label htmlFor="prompt" className="text-sm font-medium text-gray-300">Description</label>
               <textarea
@@ -100,14 +131,22 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
                 rows={4}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., 'a vibrant pink bob with sharp, asymmetrical bangs' or 'long, flowing silver hair with gentle waves'"
-                className="mt-2 w-full p-3 bg-primary border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-none text-gray-200"
+                placeholder="Select a template or describe a hairstyle..."
+                className="mt-2 w-full p-3 bg-primary border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent resize-none text-gray-200 disabled:bg-gray-800 disabled:text-gray-400"
+                disabled={!!selectedTemplate}
               />
             </div>
             
-            <div className="mt-4">
-              <label htmlFor="imageUpload" className="text-sm font-medium text-gray-300">Reference Photo (Optional)</label>
-              <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
+            <div>
+              <label htmlFor="imageUpload" className="text-sm font-medium text-gray-300">Upload Your Photo (Optional)</label>
+              <div className="mt-2 flex items-center justify-center gap-4">
+                {selectedTemplate && (
+                  <div className="text-center flex-shrink-0">
+                    <img referrerPolicy='no-referrer' src={selectedTemplate.imageUrl} alt="Selected template" className="h-32 w-32 object-cover rounded-md border-2 border-accent" />
+                    <p className="text-xs mt-2 text-gray-400">Template Reference</p>
+                  </div>
+                )}
+                <div className="flex-grow flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
                   {imagePreview ? (
                     <div>
@@ -130,9 +169,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onUserUpdate }) => 
                     </>
                   )}
                 </div>
-              </div>
+                </div>
             </div>
           </div>
+        </div>
 
           <div className="mt-6">
             {error && <p className="text-red-400 bg-red-900/30 p-3 rounded-md text-center mb-4">{error}</p>}
